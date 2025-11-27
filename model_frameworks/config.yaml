@@ -1,0 +1,48 @@
+experiment_name: "251126"
+wandb_project_name: "MUSE-VAE"
+
+# -------------------------------------------------------------------
+# Dataset / Data Processing
+# -------------------------------------------------------------------
+root_dir: "./"
+data_dir: "model_outputs"
+batch_size: 64
+data_mean: 0.5
+data_std: 0.5
+
+train_dataset: "train.csv"
+val_dataset: "val.csv"
+test_dataset: "test.csv"
+
+# -------------------------------------------------------------------
+# Training & Optimization
+# -------------------------------------------------------------------
+epochs: 200
+lr: 0.00005
+patience: 20
+check_val_every_n_epoch: 1
+test_every_n_epochs: 20
+
+# Optionally, a warm-up phase
+warmup: true
+warmup_steps: 1000
+
+# -------------------------------------------------------------------
+# Loss Function Modes
+# Point Cloud Loss Options: 'mse'
+# -------------------------------------------------------------------
+pc_loss_mode: "mse"
+
+# -------------------------------------------------------------------
+# Model Architecture
+# -------------------------------------------------------------------
+model_name: "MUSE_V1"
+
+#-------------------------------------------------------------------
+# Prediction & Evaluation
+# -------------------------------------------------------------------
+checkpoint_path: 
+output_dir: "./model_outputs"
+
+Gaussian Fitting: false
+Statistical Analysis PDF: true
