@@ -5,14 +5,14 @@ import lightning.pytorch as pl
 
 # Defining the ConvVAE Model
 class ConvVAE(pl.LightningModule):
-    def __init__(self, latent_dim=128,learning_rate=1e-4, n_mel_bins=128, frames=5187): 
+    def __init__(self, latent_dim=128,learning_rate=1e-4, n_mel_bins=128, frames=128): 
         super().__init__()
         self.save_hyperparameters()
         self.latent_dim = latent_dim
         self.learning_rate = learning_rate
         # Encoder: Convolutional Layers
         self.encoder = nn.Sequential(
-            # Encode Stack 1 (batch_size, 1, 128, 5187)
+            # Encode Stack 1 (batch_size, 1, 128, 128)
             nn.Conv2d(1, 32, kernel_size=3, stride=2, padding=1), # Now 64x64
             nn.ReLU(),
             nn.InstanceNorm2d(32),
@@ -90,8 +90,8 @@ class ConvVAE(pl.LightningModule):
         audio_features = self.decoder_fc(audio_features)  # (batch_size, 256*2*82)
         audio_features = audio_features.view(batch_size, 256, 2, 82)  # Reshape to (batch_size, 256, 2, 82)
         # Generate Spectrogram Floats
-        spectrograms = self.decoder(audio_features) # (batch_size, 1, 128, 5184)
-        spectrograms = spectrograms[:, :, :, :5187]                    # crop to match input time length
+        spectrograms = self.decoder(audio_features) # (batch_size, 1, 128, 128)
+        spectrograms = spectrograms[:, :, :, :128]                    # crop to match input time length
         return spectrograms
     
     def forward(self, spectrograms):
