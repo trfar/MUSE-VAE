@@ -24,6 +24,7 @@ mkdir -p temp_configs
 TRAIN_SCRIPT="$ROOT/model_src/Training-Pipeline.py"
 PRED_SCRIPT="$ROOT/model_src/Predicting-Pipeline.py"
 RECON_SCRIPT="$ROOT/model_src/Audio-Process-Pipeline.py"
+LATENT_SCRIPT="$ROOT/model_src/Latent-Space-Pipeline.py"
 
 for CONFIG in "${CONFIGS[@]}"; do
 
@@ -52,7 +53,15 @@ for CONFIG in "${CONFIGS[@]}"; do
         echo "============================================"
         echo "GENERATING AUDIO RECONSTRUCTIONS — Config: $TEMP_CONFIG"
         echo "============================================"
-        python "$RECON_SCRIPT" --config "$TEMP_CONFIG" --max_samples 10
+        python "$RECON_SCRIPT" --config "$TEMP_CONFIG" --max_samples 20
+        echo "Completed run $i for config: $TEMP_CONFIG"
+        echo
+
+        echo
+        echo "============================================"
+        echo "LATENT SPACE ANALYSIS — Config: $TEMP_CONFIG"
+        echo "============================================"
+        python "$LATENT_SCRIPT" --config "$TEMP_CONFIG" --split "test" --max_samples 200
         echo "Completed run $i for config: $TEMP_CONFIG"
         echo
     done

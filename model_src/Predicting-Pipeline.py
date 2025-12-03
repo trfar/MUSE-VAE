@@ -131,20 +131,22 @@ if __name__ == "__main__":
 
     ## Set up PDF output path
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    save_dir = os.path.join(project_root, "TrainedModels")
-    os.makedirs(save_dir, exist_ok=True)
+    AdvML_root = os.path.dirname(project_root)
+    save_dir_project = os.path.join(project_root, "TrainedModels")
+    os.makedirs(save_dir_project, exist_ok=True)
 
     exp_name = config.get("experiment_name", "experiment")
-    results_dir = os.path.join(save_dir, exp_name, "eval")
+    results_dir = os.path.join(save_dir_project, exp_name)
     os.makedirs(results_dir, exist_ok=True)
 
-    pdf_path = os.path.join(results_dir, "mel_reconstructions.pdf")
+    pdf_path_1 = os.path.join(results_dir, "Mel_Reconstruction.pdf")
+    pdf_path_2 = os.path.join(AdvML_root, "TrainedModels", f"{exp_name}_Mel_Reconstruction.pdf")
 
     ## Run through test set and save comparisons
     max_examples = args.max_examples
     example_count = 0
 
-    with PdfPages(pdf_path) as pdf:
+    with PdfPages(pdf_path_1) as pdf:
         with torch.no_grad():
             for batch_idx, (x, genres) in enumerate(test_loader):
                 # x: (B, 1, 128, 216)
@@ -184,9 +186,19 @@ if __name__ == "__main__":
                         pdf=pdf
                     )
 
+                    # Also save to secondary location
+                    plot_pair_to_pdf(
+                        original=original,
+                        reconstructed=reconstructed,
+                        genre=genre,
+                        index=example_count,
+                        pdf=PdfPages(pdf_path_2)
+                    )
+
                     example_count += 1
 
                 if example_count >= max_examples:
                     break
 
-    print(f"[INFO] Reconstruction PDF saved to: {pdf_path}")
+    print(f"[INFO] Reconstruction PDF saved to: {pdf_path_1}")
+    print(f"[INFO] Reconstruction PDF also saved to: {pdf_path_2}")

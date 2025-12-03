@@ -1,4 +1,4 @@
-experiment_name: "251126"
+experiment_name: "251203_MUSE-VAE_Training"
 wandb_project_name: "MUSE-VAE"
 
 # -------------------------------------------------------------------
@@ -31,12 +31,14 @@ warmup_steps: 1000
 # Model Architecture
 # -------------------------------------------------------------------
 model_name: "MUSE-VAE"
-latent_dim: 16
+latent_dim: 1024
+anneal_epochs: 30
+KL_Beta: 0.005
 #-------------------------------------------------------------------
 # Prediction & Evaluation
 # -------------------------------------------------------------------
 checkpoint_path: /home/trfar/Documents/Advanced Machine 
-  Learning/TrainedModels/251126/checkpoints/epochepoch=171-val_lossval_loss=0.0684.ckpt
+  Learning/TrainedModels/251126/checkpoints/epochepoch=199-val_lossval_loss=0.0436.ckpt
 output_dir: "./model_outputs"
 
 Gaussian Fitting: false

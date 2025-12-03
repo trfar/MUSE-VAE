@@ -14,72 +14,60 @@ class ConvVAE(pl.LightningModule):
 
         ## Encoder (no hardcoded shapes, fully dynamic)
         self.encoder = nn.Sequential(
-            # (B, 1, 128, 216)
-            nn.Conv2d(1, 32, kernel_size=3, stride=2, padding=1), 
+            # 128x216 -> 64x108
+            nn.Conv2d(1, 32, kernel_size=3, stride=(2, 2), padding=1),
             nn.ReLU(),
             nn.InstanceNorm2d(32),
 
-            # (B, 32, 64, 108)
-            nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1),
+            # 64x108 -> 32x54
+            nn.Conv2d(32, 64, kernel_size=3, stride=(2, 2), padding=1),
             nn.ReLU(),
             nn.InstanceNorm2d(64),
 
-            # (B, 64, 32, 54)
-            nn.Conv2d(64, 128, kernel_size=3, stride=2, padding=1),
+            # 32x54 -> 16x27
+            nn.Conv2d(64, 128, kernel_size=3, stride=(2, 2), padding=1),
             nn.ReLU(),
             nn.InstanceNorm2d(128),
 
-            # (B, 128, 16, 27)
-            nn.Conv2d(128, 256, kernel_size=3, stride=2, padding=1),
+            # 16x27 -> 8x27
+            nn.Conv2d(128, 256, kernel_size=3, stride=(2, 1), padding=1),
             nn.ReLU(),
             nn.InstanceNorm2d(256),
 
-            # (B, 256, 8, 14)
-            nn.Conv2d(256, 256, kernel_size=3, stride=2, padding=1),
+            # 8x27 -> 8x27   (NO FURTHER DOWNSAMPLING)
+            nn.Conv2d(256, 256, kernel_size=3, stride=(1, 1), padding=1),
             nn.ReLU(),
             nn.InstanceNorm2d(256),
-
-            # (B, 256, 4, 7)
         )
 
-        ## Dynamically compute flattened encoder dimension
-        with torch.no_grad():
-            dummy = torch.zeros(1, 1, 128, 216)  # your real GTZAN size
-            out = self.encoder(dummy)
-            self.enc_channels = out.shape[1]
-            self.enc_h = out.shape[2]
-            self.enc_w = out.shape[3]
-            self.enc_flat_dim = out.numel()
+        ## Shape after encoder stacks
+        self.enc_feat_h = 8
+        self.enc_feat_w = 27
+        self.enc_feat_channels = 256
+        self.enc_feat_dim = self.enc_feat_channels * self.enc_feat_h * self.enc_feat_w
 
         ## Fully-connected layers for μ and log(σ²)
-        self.fc_mu = nn.Linear(self.enc_flat_dim, self.latent_dim)
-        self.fc_logvar = nn.Linear(self.enc_flat_dim, self.latent_dim)
-
+        self.fc_mu = nn.Linear(self.enc_feat_dim, self.latent_dim)
+        self.fc_logvar = nn.Linear(self.enc_feat_dim, self.latent_dim)
         ## Projection from latent space back into encoder shape
-        self.decoder_fc = nn.Linear(self.latent_dim, self.enc_flat_dim)
+        self.decoder_fc = nn.Linear(self.latent_dim, self.enc_feat_dim)
 
         ## Decoder (mirrors encoder, dynamic reshape)
         self.decoder = nn.Sequential(
-            # (B, 256, 4, 7)
-            nn.ConvTranspose2d(256, 256, 4, 2, 1),
+            nn.ConvTranspose2d(256, 256, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
 
-            # (B, 256, 8, 14)
-            nn.ConvTranspose2d(256, 128, 4, 2, 1),
+            nn.ConvTranspose2d(256, 128, kernel_size=3, stride=(2, 1), padding=1, output_padding=(1, 0)),
             nn.ReLU(),
 
-            # (B, 128, 16, 28)
-            nn.ConvTranspose2d(128, 64, 4, 2, 1),
+            nn.ConvTranspose2d(128, 64, kernel_size=3, stride=(2, 2), padding=1, output_padding=1),
             nn.ReLU(),
 
-            # (B, 64, 32, 56)
-            nn.ConvTranspose2d(64, 32, 4, 2, 1),
+            nn.ConvTranspose2d(64, 32, kernel_size=3, stride=(2, 2), padding=1, output_padding=1),
             nn.ReLU(),
 
-            # (B, 32, 64, 112)
-            nn.ConvTranspose2d(32, 1, 4, 2, 1),
+            nn.ConvTranspose2d(32, 1, kernel_size=3, stride=(2, 2), padding=1, output_padding=1),
             nn.Softplus()                     # positive output
-            # (B, 1, 128, 224) [will crop to (128,216)]
         )
 
     def encode(self, spectrograms):
@@ -99,7 +87,7 @@ class ConvVAE(pl.LightningModule):
         """Decodes the Latent Variable to Audio (Spectrogram Floats)."""
         # First Fully Connected Layer
         audio_features = self.decoder_fc(audio_features)  # (batch_size, 256*2*82)
-        audio_features = audio_features.view(batch_size, self.enc_channels, self.enc_h, self.enc_w)  # Reshape to Dynamically Computed Shape
+        audio_features = audio_features.view(batch_size, self.enc_feat_channels, self.enc_feat_h, self.enc_feat_w)  # Reshape to Dynamically Computed Shape
         # Generate Spectrogram Floats
         spectrograms = self.decoder(audio_features) # (batch_size, 1, 128, 224)
         spectrograms = spectrograms[:, :, :, :216]                    # crop to match input time length

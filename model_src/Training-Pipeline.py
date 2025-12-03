@@ -39,6 +39,8 @@ class MUSE_VAE(LightningModule):
         # Warmup settings
         self.warmup = config.get("warmup", False)
         self.warmup_steps = config.get("warmup_steps", 0)
+        self.anneal_epochs = config.get("anneal_epochs", 30)
+        self.KL_beta = config.get("KL_Beta", .1)
 
     def forward(self, audio):
         """
@@ -66,8 +68,8 @@ class MUSE_VAE(LightningModule):
         kl_per_sample = kl_elem.sum(dim=1)
         kl_raw = kl_per_sample.mean()
 
-        anneal_epochs = 30
-        max_beta = 0.05
+        anneal_epochs = self.anneal_epochs
+        max_beta = self.KL_beta
         beta = max_beta * min(self.current_epoch / anneal_epochs, 1.0)
 
         kl_loss = beta * kl_raw
@@ -93,8 +95,8 @@ class MUSE_VAE(LightningModule):
         kl_per_sample = kl_elem.sum(dim=1)
         kl_raw = kl_per_sample.mean()
 
-        anneal_epochs = 30
-        max_beta = 0.05
+        anneal_epochs = self.anneal_epochs
+        max_beta = self.KL_beta
         beta = max_beta * min(self.current_epoch / anneal_epochs, 1.0)
 
         kl_loss = beta * kl_raw
