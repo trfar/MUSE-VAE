@@ -3,7 +3,7 @@ source ~/anaconda3/etc/profile.d/conda.sh
 conda activate SoundMap
 
 ## Set Working Directory
-ROOT="/home/trfar/Documents/Stats/MUSE-VAE"
+ROOT="/home/trfar/Documents/Advanced Machine Learning/MUSE-VAE"
 cd "$ROOT"
 
 ## List of Config Files to Train
@@ -12,7 +12,7 @@ CONFIGS=(
 )
 
 ## Number of runs per config
-N_RUNS=5
+N_RUNS=1
 
 ## Temp config folder
 mkdir -p temp_configs
@@ -23,6 +23,7 @@ mkdir -p temp_configs
 
 TRAIN_SCRIPT="$ROOT/model_src/Training-Pipeline.py"
 PRED_SCRIPT="$ROOT/model_src/Predicting-Pipeline.py"
+RECON_SCRIPT="$ROOT/model_src/Audio-Process-Pipeline.py"
 
 for CONFIG in "${CONFIGS[@]}"; do
 
@@ -30,24 +31,29 @@ for CONFIG in "${CONFIGS[@]}"; do
 
     for ((i=1; i<=N_RUNS; i++)); do
         
-        ## Make temp config file
+        # ## Make temp config file
         TEMP_CONFIG="temp_configs/${BASENAME}_run${i}.yaml"
         cp "$CONFIG" "$TEMP_CONFIG"
 
         echo "============================================"
         echo "TRAINING — Config: $TEMP_CONFIG"
         echo "============================================"
-
         python "$TRAIN_SCRIPT" --config "$TEMP_CONFIG"
 
         echo
         echo "============================================"
-        echo "PREDICTING — Config: $TEMP_CONFIG"
+        echo "GENERATING SPECTROGRAM PDF — Config: $TEMP_CONFIG"
         echo "============================================"
-
         python "$PRED_SCRIPT" --config "$TEMP_CONFIG"
-
         echo "Completed run $i for config: $CONFIG"
+        echo
+
+        echo
+        echo "============================================"
+        echo "GENERATING AUDIO RECONSTRUCTIONS — Config: $TEMP_CONFIG"
+        echo "============================================"
+        python "$RECON_SCRIPT" --config "$TEMP_CONFIG" --max_samples 10
+        echo "Completed run $i for config: $TEMP_CONFIG"
         echo
     done
 done

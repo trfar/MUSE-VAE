@@ -3,73 +3,84 @@ import torch.nn as nn
 import torch.nn.functional as F
 import lightning.pytorch as pl
 
-# Defining the ConvVAE Model
+
+## Convolutional Variational Autoencoder for 128x216 Mel Spectrograms
 class ConvVAE(pl.LightningModule):
-    def __init__(self, latent_dim=128,learning_rate=1e-4, n_mel_bins=128, frames=128): 
+    def __init__(self, latent_dim=32, learning_rate=1e-4):
         super().__init__()
         self.save_hyperparameters()
         self.latent_dim = latent_dim
         self.learning_rate = learning_rate
-        # Encoder: Convolutional Layers
+
+        ## Encoder (no hardcoded shapes, fully dynamic)
         self.encoder = nn.Sequential(
-            # Encode Stack 1 (batch_size, 1, 128, 128)
-            nn.Conv2d(1, 32, kernel_size=3, stride=2, padding=1), # Now 64x64
+            # (B, 1, 128, 216)
+            nn.Conv2d(1, 32, kernel_size=3, stride=2, padding=1), 
             nn.ReLU(),
             nn.InstanceNorm2d(32),
-            # Encode Stack 2 (batch_size, 32, 64, 2594)
-            nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1), # Now 32x32
+
+            # (B, 32, 64, 108)
+            nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1),
             nn.ReLU(),
             nn.InstanceNorm2d(64),
-            # Encode Stack 3 (batch_size, 64, 32, 1297)
-            nn.Conv2d(64, 128, kernel_size=3, stride=2, padding=1), # Now 16x16 
+
+            # (B, 64, 32, 54)
+            nn.Conv2d(64, 128, kernel_size=3, stride=2, padding=1),
             nn.ReLU(),
             nn.InstanceNorm2d(128),
-            # Encode Stack 4 (batch_size, 128, 16, 648)
-            nn.Conv2d(128, 256, kernel_size=3, stride=2, padding=1), ## Now 8x8       
+
+            # (B, 128, 16, 27)
+            nn.Conv2d(128, 256, kernel_size=3, stride=2, padding=1),
             nn.ReLU(),
             nn.InstanceNorm2d(256),
-            # Encode Stack 5 (batch_size, 256, 8, 324)
-            nn.Conv2d(256, 256, kernel_size=3, stride=2, padding=1), # Now 4x4
+
+            # (B, 256, 8, 14)
+            nn.Conv2d(256, 256, kernel_size=3, stride=2, padding=1),
             nn.ReLU(),
             nn.InstanceNorm2d(256),
-            # Encode Stack 6 (batch_size, 256, 4, 162)
-            nn.Conv2d(256, 256, kernel_size=3, stride=2, padding=1), # Now 2x2
-            nn.ReLU(),
-            nn.InstanceNorm2d(256),
-            # Ending Stack (batch_size, 256, 2, 82)
+
+            # (B, 256, 4, 7)
         )
-        
-        # Fully Connected Layers for Mu and Logvar
-        self.fc_mu = nn.Linear(256*2*82, self.latent_dim) 
-        self.fc_logvar = nn.Linear(256*2*82, self.latent_dim) 
 
-        # Linear projection
-        self.decoder_fc = nn.Linear(self.latent_dim, 256 * 2 * 82)
+        ## Dynamically compute flattened encoder dimension
+        with torch.no_grad():
+            dummy = torch.zeros(1, 1, 128, 216)  # your real GTZAN size
+            out = self.encoder(dummy)
+            self.enc_channels = out.shape[1]
+            self.enc_h = out.shape[2]
+            self.enc_w = out.shape[3]
+            self.enc_flat_dim = out.numel()
 
-        # Transposed-convolution decoder
+        ## Fully-connected layers for μ and log(σ²)
+        self.fc_mu = nn.Linear(self.enc_flat_dim, self.latent_dim)
+        self.fc_logvar = nn.Linear(self.enc_flat_dim, self.latent_dim)
+
+        ## Projection from latent space back into encoder shape
+        self.decoder_fc = nn.Linear(self.latent_dim, self.enc_flat_dim)
+
+        ## Decoder (mirrors encoder, dynamic reshape)
         self.decoder = nn.Sequential(
-            # Decode Stack 1 (batch_size, 256, 2, 82)
+            # (B, 256, 4, 7)
             nn.ConvTranspose2d(256, 256, 4, 2, 1),
             nn.ReLU(),
-            # Decode Stack 2 (batch_size, 256, 4, 164)
-            nn.ConvTranspose2d(256, 256, 4, 2, 1),
-            nn.ReLU(),
-            # Decode Stack 3 (batch_size, 256, 8, 328)
+
+            # (B, 256, 8, 14)
             nn.ConvTranspose2d(256, 128, 4, 2, 1),
             nn.ReLU(),
-            # Decode Stack 4 (batch_size, 128, 16, 656)
+
+            # (B, 128, 16, 28)
             nn.ConvTranspose2d(128, 64, 4, 2, 1),
             nn.ReLU(),
-            # Decode Stack 5 (batch_size, 64, 32, 1312)
+
+            # (B, 64, 32, 56)
             nn.ConvTranspose2d(64, 32, 4, 2, 1),
             nn.ReLU(),
-            # Decode Stack 6 (batch_size, 32, 64, 2624)
-            nn.ConvTranspose2d(32, 1, 4, 2, 1),
-            # Output Layer (batch_size, 1, 128, 5248)
-            # Final Activation
-            nn.Softplus()   # or nn.ReLU()
-        )
 
+            # (B, 32, 64, 112)
+            nn.ConvTranspose2d(32, 1, 4, 2, 1),
+            nn.Softplus()                     # positive output
+            # (B, 1, 128, 224) [will crop to (128,216)]
+        )
 
     def encode(self, spectrograms):
         """Encodes the Input into Latent Space (Mean and Log Variance)."""
@@ -88,27 +99,29 @@ class ConvVAE(pl.LightningModule):
         """Decodes the Latent Variable to Audio (Spectrogram Floats)."""
         # First Fully Connected Layer
         audio_features = self.decoder_fc(audio_features)  # (batch_size, 256*2*82)
-        audio_features = audio_features.view(batch_size, 256, 2, 82)  # Reshape to (batch_size, 256, 2, 82)
+        audio_features = audio_features.view(batch_size, self.enc_channels, self.enc_h, self.enc_w)  # Reshape to Dynamically Computed Shape
         # Generate Spectrogram Floats
-        spectrograms = self.decoder(audio_features) # (batch_size, 1, 128, 128)
-        spectrograms = spectrograms[:, :, :, :128]                    # crop to match input time length
+        spectrograms = self.decoder(audio_features) # (batch_size, 1, 128, 224)
+        spectrograms = spectrograms[:, :, :, :216]                    # crop to match input time length
         return spectrograms
     
-    def forward(self, spectrograms):
-        """Defines the Forward Pass."""
-        batch_size = spectrograms.shape[0]
-        mu, logvar = self.encode(spectrograms)
-        audio_features = self.reparameterize(mu, logvar)
-        spectrograms = self.decode(audio_features, batch_size)
+    def forward(self, x):
+        batch_size = x.size(0)
+        mu, logvar = self.encode(x)
+        z = self.reparameterize(mu, logvar)
+        spectrograms = self.decode(z, batch_size)
         return spectrograms, mu, logvar
+
         
     def training_step(self, batch, batch_idx):
         """Training Logic for a Single Batch of Data."""
         ## Foward Pass through the Model
-        spectrograms, mu, logvar = self(batch)
+        x, _ = batch
+        spectrograms, mu, logvar = self(x)
+
         ## Compute the Loss
         # MSE Loss
-        mse_loss = F.mse_loss(torch.log1p(spectrograms), torch.log1p(batch))
+        mse_loss = F.mse_loss(torch.log1p(spectrograms), torch.log1p(x))
         # KL Divergence Loss (Smoothing Latent Space)
         kl_loss = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp()).mean()  # KL Divergence Loss
         # KL Annealing
@@ -128,10 +141,11 @@ class ConvVAE(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         """Validation Logic for a Single Batch of Data."""
         ## Foward Pass through the Model
-        spectrograms, mu, logvar = self(batch)
+        x, _ = batch
+        spectrograms, mu, logvar = self(x)
         ## Compute the Loss
         # MSE Loss
-        mse_loss = F.mse_loss(torch.log1p(spectrograms), torch.log1p(batch))
+        mse_loss = F.mse_loss(torch.log1p(spectrograms), torch.log1p(x))
         # KL Divergence Loss (Smoothing Latent Space)
         kl_loss = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp()).mean()  # KL Divergence Loss
         # KL Annealing

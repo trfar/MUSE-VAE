@@ -14,6 +14,7 @@ from lightning.pytorch.callbacks import ModelCheckpoint, EarlyStopping
 from lightning.pytorch.loggers import WandbLogger
 
 # Custom Imports
+from model_src.DataLoader import DataProcessing
 from model_frameworks.VAE import ConvVAE as TheModel
 
 # Setting Propper Path for Saving Models
@@ -32,8 +33,6 @@ class MUSE_VAE(LightningModule):
         self.model = TheModel(
             latent_dim=config.get('latent_dim', 128),
             learning_rate=config.get('learning_rate', 1e-4),
-            n_mel_bins=config.get('n_mel_bins', 128),
-            frames=config.get('frames', 5187)
         )
         # Storage for test results
         self.test_results = []
@@ -49,68 +48,77 @@ class MUSE_VAE(LightningModule):
         return self.model(audio)
 
     def training_step(self, batch, batch_idx):
-        """Training Logic for a Single Batch of Data."""
-        spectrograms, mu, logvar = self(batch)
-        eps = 1e-5
-        # Clamp negatives
-        spectrograms = torch.clamp(spectrograms, min=0)
-        batch = torch.clamp(batch, min=0)
-        # Reconstruction loss (L1 on log scale)
-        recon_loss = F.l1_loss(torch.log1p(spectrograms + eps),
-                            torch.log1p(batch + eps))
-        # KL divergence
-        kl_loss = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp()).mean()
-        # KL annealing
-        anneal_epochs = 50
-        kl_weight = min(self.current_epoch / anneal_epochs, 1)
-        kl_loss = kl_weight * kl_loss
-        # Total VAE loss
+        ## Unpack batch
+        x, _ = batch                       # x in [0,1], shape (B,1,128,216)
+
+        ## Forward
+        recon, mu, logvar = self(x)
+
+        ## Clamp to valid range
+        recon = torch.clamp(recon, 0.0, 1.0)
+        x     = torch.clamp(x,     0.0, 1.0)
+
+        ## Reconstruction loss DIRECTLY on normalized mel
+        recon_loss = F.l1_loss(recon, x)
+
+        ## KL as we set it before (beta-VAE)
+        kl_elem = -0.5 * (1 + logvar - mu.pow(2) - logvar.exp())
+        kl_per_sample = kl_elem.sum(dim=1)
+        kl_raw = kl_per_sample.mean()
+
+        anneal_epochs = 30
+        max_beta = 0.05
+        beta = max_beta * min(self.current_epoch / anneal_epochs, 1.0)
+
+        kl_loss = beta * kl_raw
         total_loss = recon_loss + kl_loss
 
-        ## Logging the Losses
-        self.log('train_loss', total_loss)
-        self.log('train_spectrogram_L1_loss', recon_loss)
-        self.log('train_kl_loss', kl_loss)      
+        self.log("train_loss", total_loss)
+        self.log("train_spectrogram_L1_loss", recon_loss)
+        self.log("train_kl_loss", kl_loss)
 
         return total_loss
+
     
     def validation_step(self, batch, batch_idx):
-        """Validation Logic for a Single Batch of Data."""
-        ## Foward Pass through the Model
-        spectrograms, mu, logvar = self(batch)
-        eps = 1e-5
-        # Clamp negatives
-        spectrograms = torch.clamp(spectrograms, min=0)
-        batch = torch.clamp(batch, min=0)
-        ## Compute the Loss
-        # L1 Loss
-        recon_loss = F.l1_loss(torch.log1p(spectrograms + eps),
-                       torch.log1p(batch + eps))
-        # KL Divergence Loss (Smoothing Latent Space)
-        kl_loss = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp()).mean()  # KL Divergence Loss
-        # KL Annealing
-        anneal_epochs = 50
-        kl_weight = min(self.current_epoch / anneal_epochs,1)  # Linear annealing
-        kl_loss = kl_weight * kl_loss  # KL Annealing
-        #Total Loss
-        total_loss = recon_loss + kl_loss  # Total Loss
+        x, _ = batch
+        recon, mu, logvar = self(x)
 
-        ## Logging the Losses
-        self.log('val_loss', total_loss)
-        self.log('val_spectrogram_L1_loss', recon_loss)
-        self.log('val_kl_loss', kl_loss)      
+        recon = torch.clamp(recon, 0.0, 1.0)
+        x     = torch.clamp(x,     0.0, 1.0)
+
+        recon_loss = F.l1_loss(recon, x)
+
+        kl_elem = -0.5 * (1 + logvar - mu.pow(2) - logvar.exp())
+        kl_per_sample = kl_elem.sum(dim=1)
+        kl_raw = kl_per_sample.mean()
+
+        anneal_epochs = 30
+        max_beta = 0.05
+        beta = max_beta * min(self.current_epoch / anneal_epochs, 1.0)
+
+        kl_loss = beta * kl_raw
+        total_loss = recon_loss + kl_loss
+
+        self.log("val_loss", total_loss)
+        self.log("val_spectrogram_L1_loss", recon_loss)
+        self.log("val_kl_loss", kl_loss)
 
         return total_loss
 
     def test_step(self, batch, batch_idx):
-        spectrograms, mu, logvar= self(batch)
+        x, _ = batch
+        spectrograms, mu, logvar = self(x)
+
         self.test_results.append({
             'spectrograms': spectrograms.detach().cpu(),}
             )
 
     def configure_optimizers(self):
+        ## Optimizer
         optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
-        ## Reduce-On-Plateau Scheduler
+
+        ## Plateau scheduler (monitors val_loss)
         scheduler_plateau = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer,
             mode='min',
@@ -118,7 +126,10 @@ class MUSE_VAE(LightningModule):
             patience=5,
             verbose=True
         )
-        ## Warmup Scheduler
+
+        schedulers = []
+
+        # Optional warmup scheduler
         if self.hparams.get("warmup", False):
 
             def lr_lambda(step):
@@ -128,35 +139,27 @@ class MUSE_VAE(LightningModule):
                 return 1.0
 
             scheduler_warmup = torch.optim.lr_scheduler.LambdaLR(
-                optimizer, lr_lambda=lr_lambda
+                optimizer,
+                lr_lambda=lr_lambda
             )
 
-            return {
-                "optimizer": optimizer,
-                "lr_scheduler": [
-                    {
-                        "scheduler": scheduler_warmup,
-                        "interval": "step",   
-                        "frequency": 1,
-                    },
-                    {
-                        "scheduler": scheduler_plateau,
-                        "monitor": "val_loss",
-                        "interval": "epoch",              
-                        "frequency": 1,
-                    }
-                ]
-            }
+            # Step-wise warmup scheduler (no monitor needed)
+            schedulers.append({
+                "scheduler": scheduler_warmup,
+                "interval": "step",
+                "frequency": 1
+            })
 
-        ## No Warmup Return
-        return {
-            "optimizer": optimizer,
-            "lr_scheduler": {
-                "scheduler": scheduler_plateau,
-                "monitor": "val_loss",
-                "interval": "epoch"
-            }
-        }
+        # Epoch-wise ReduceLROnPlateau scheduler (monitors val_loss)
+        schedulers.append({
+            "scheduler": scheduler_plateau,
+            "monitor": "val_loss",
+            "interval": "epoch",
+            "frequency": 1
+        })
+
+        # Lightning-friendly return: ([optimizers], [schedulers])
+        return [optimizer], schedulers
 
     def on_test_epoch_end(self):
         """
@@ -171,7 +174,8 @@ class MUSE_VAE(LightningModule):
         print(f"Test results saved to {out_path}")
 
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
-        spectrograms, mu, logvar = self(batch)
+        x, _ = batch
+        spectrograms, mu, logvar = self(x)
         return spectrograms
 
 if __name__ == '__main__':
@@ -189,12 +193,8 @@ if __name__ == '__main__':
         config = yaml.load(f)
 
     ## Prepare data
-    data_processing = DataProcessing(root_dir=config.get('root_dir', './'),
-                                     data_dir=config.get('data_dir', 'data'),
-                                     args=config)
-    train_loader, val_loader, test_loader = data_processing.train_test_val_split(
-        batch_size=config.get('batch_size', 64)
-    )
+    data_processing = DataProcessing()
+    train_loader, val_loader, test_loader = data_processing.train_test_val_split()
 
     ## Weights & Biases logger
     wandb_logger = WandbLogger(
@@ -214,18 +214,19 @@ if __name__ == '__main__':
     ## Early Stopping
     early_stop_callback = EarlyStopping(
         monitor='val_loss',
-        patience=config.get('patience', 15),
+        patience=config.get('patience', 25),
         verbose=True,
         mode='min'
     )
 
     ## Trainer
     trainer = Trainer(
-        max_epochs=config.get('epochs', 150),
+        max_epochs=config.get('epochs', 200),
         accelerator='gpu',
         devices=1,
         logger=wandb_logger,
-        callbacks=[checkpoint_callback, early_stop_callback],
+        # callbacks=[checkpoint_callback, early_stop_callback],
+        callbacks=[checkpoint_callback],
         check_val_every_n_epoch=config.get('check_val_every_n_epoch', 1),
         log_every_n_steps=5,
     )

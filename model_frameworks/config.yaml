@@ -18,30 +18,25 @@ test_dataset: "test.csv"
 # Training & Optimization
 # -------------------------------------------------------------------
 epochs: 200
-lr: 0.00005
-patience: 20
+lr: 0.0001
+patience: 25
 check_val_every_n_epoch: 1
-test_every_n_epochs: 20
+test_every_n_epochs: 50
 
 # Optionally, a warm-up phase
 warmup: true
 warmup_steps: 1000
 
 # -------------------------------------------------------------------
-# Loss Function Modes
-# Point Cloud Loss Options: 'mse'
-# -------------------------------------------------------------------
-pc_loss_mode: "mse"
-
-# -------------------------------------------------------------------
 # Model Architecture
 # -------------------------------------------------------------------
-model_name: "MUSE_V1"
-
+model_name: "MUSE-VAE"
+latent_dim: 16
 #-------------------------------------------------------------------
 # Prediction & Evaluation
 # -------------------------------------------------------------------
-checkpoint_path: 
+checkpoint_path: /home/trfar/Documents/Advanced Machine 
+  Learning/TrainedModels/251126/checkpoints/epochepoch=171-val_lossval_loss=0.0684.ckpt
 output_dir: "./model_outputs"
 
 Gaussian Fitting: false
