@@ -10,6 +10,9 @@
 \usepackage{hyperref}
 \usepackage{booktabs}
 \usepackage{cite}
+\usepackage{geometry}
+
+\geometry{margin=1in}
 
 \title{Variational Autoencoders for Musical Spectrogram Modeling: MUSE - VAE}
 
@@ -23,67 +26,148 @@ STA 571: Advanced Probabilistic Machine Learning}
 \maketitle
 
 \begin{abstract}
-This paper investigates the use of Variational Autoencoders (VAEs) to learn probabilistic latent representations of musical audio using spectrogram segments extracted from the GTZAN dataset. Each 30-second audio clip is divided into six 5-second windows and transformed into mel spectrograms. The probabilistic model is defined through the joint distribution \(p_\theta(x,z) = p_\theta(x|z)p(z)\) with a Gaussian prior and encoder-defined approximate posterior. Particular emphasis is placed on latent-space structure, including clustering by musical genre, smooth interpolation properties, and visualization tools developed to analyze encoder behavior. Results show meaningful separation of genres in latent space and recognizable but regularized spectrogram reconstructions, consistent with known VAE trade-offs between fidelity and structure.
+This paper investigates the use of Variational Autoencoders (VAEs) to learn probabilistic latent representations of musical audio using spectrogram segments extracted from the GTZAN dataset. Each 30-second audio clip is divided into six 5-second windows and transformed into mel spectrograms. The probabilistic model is defined through the joint distribution \(p_\theta(x,z) = p_\theta(x \mid z)p(z)\) with a Gaussian prior and encoder-defined approximate posterior. Particular emphasis is placed on latent-space structure to analyze encoder behavior. Results show meaningful separation of genres in latent space and recognizable but regularized spectrogram reconstructions, consistent with known VAE trade-offs between fidelity and structure.
 \end{abstract}
+
 \newpage
 
 \section{Introduction}
 
-Variational Autoencoders (VAEs), introduced by Kingma and Welling
-\cite{kingma2019vae}, provide a probabilistic latent-variable model capable of
-learning structured, continuous representations useful for generative modeling.
-In this project, we apply VAEs to musical audio represented as mel
-spectrograms.
+Variational Autoencoders (VAEs), introduced by Kingma and Welling \cite{kingma2019vae}, are latent-variable generative models that combine neural networks with variational Bayesian inference. VAEs learn a continuous, smooth latent space by optimizing a tractable lower bound on the data likelihood. This makes them useful for tasks such as interpolation, clustering, and generative audio modeling.
+
+In this project, I apply a convolutional VAE to musical audio represented as mel spectrograms derived from the GTZAN dataset \cite{tzanetakis2002gtzan}. The main focus is on reconstruction quality and on how genre information and musical structure appear in the learned latent space.
 
 \section{Dataset and Preprocessing}
 
-We evaluate our model using the GTZAN dataset \cite{tzanetakis2002gtzan}, a
-standard benchmark containing ten musical genres, each with 100 audio clips.
-Each 30-second clip is segmented into fixed-size windows and transformed into
-log-magnitude mel spectrograms.
+I use the GTZAN genre dataset, a benchmark collection of ten genres, each containing 100 audio clips. Each 30-second audio file is segmented into six fixed-length windows and transformed into mel spectrograms using a 128-bin mel filterbank.
+
+Because nearly all genres in GTZAN use similar instrumentation such as voice, guitars, bass, and drums, the resulting mel spectrograms share similar global structures. This is important context when interpreting the latent space and the degree of genre separation.
 
 \section{Previous Work}
 
-Music generation with deep generative models has been studied extensively.
-Hierarchical VAEs such as MusicVAE \cite{roberts2018musicvae} demonstrate
-strong latent structure and smooth interpolation properties in musical domains.
-Our work adapts these ideas to spectral audio representations rather than
-symbolic sequences.
-
+Deep generative models for music have advanced steadily over the past decade. MusicVAE \cite{roberts2018musicvae} showed that hierarchical latent structures can support smooth interpolation and long-range musical coherence. While MusicVAE operates mainly on symbolic sequences, my work focuses on spectral audio representations. This introduces separate challenges such as phase reconstruction and preservation of fine temporal detail, which must be addressed differently in the audio domain.
 
 \section{Methods}
-[placeholder]
 
-\subsection{Probabilistic Model}
-[placeholder]
+\subsection{Probabilistic VAE Model}
 
-\subsection{Model Variants and Training}
-[placeholder]
+A VAE models data \(x\) using a latent variable \(z\) sampled from a prior \(p(z)\), usually a standard Gaussian. The joint model is
+\[
+p_\theta(x, z) = p_\theta(x \mid z) p(z).
+\]
+
+Because the true posterior \(p_\theta(z \mid x)\) is intractable, I use a neural encoder to learn an approximate posterior
+\[
+q_\phi(z \mid x) = \mathcal{N}(z \mid \mu_\phi(x), \sigma_\phi^2(x) I).
+\]
+
+Training optimizes the Evidence Lower Bound (ELBO)
+\[
+\mathcal{L}(x) =
+\mathbb{E}_{q_\phi(z \mid x)}[\log p_\theta(x \mid z)]
+- D_{\mathrm{KL}}(q_\phi(z \mid x)\,\|\,p(z)).
+\]
+
+The first term encourages accurate spectrogram reconstruction, and the KL term regularizes the latent space toward a smooth Gaussian manifold. I use KL annealing to prevent early posterior collapse.
+
+\subsection{Model Architecture}
+
+I use a convolutional encoder and decoder tailored to 128\(\times\)216 mel spectrograms. A moderately high latent dimensionality helps avoid oversmoothing and supports variation across genres. A Softplus output activation ensures valid, positive mel coefficients.
 
 \subsection{Latent Space Analysis Tools}
-[placeholder]
+
+To interpret the learned representation, I apply PCA projections to the latent encodings. These projections give a human-interpretable view of how genres cluster and how the model arranges different musical styles in the latent space.
 
 \subsection{Mode Collapse Mitigation}
-[placeholder]
+
+Audio contains high-frequency and transient detail that is difficult to model. To reduce collapse to a narrow set of spectra, I use:
+\begin{itemize}
+    \item KL annealing across 50 epochs,
+    \item a latent dimension in the range of 512 to 2048,
+    \item a log-magnitude reconstruction loss,
+    \item architectural choices that limit excessive smoothing.
+\end{itemize}
 
 \section{Results}
-[placeholder]
 
 \subsection{Latent Space Structure}
-[placeholder]
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{./latent_pca_test.png}
+    \caption{PCA projection of the VAE latent space showing emergent genre clusters.}
+    \label{fig:latent_pca}
+\end{figure}
+
+Several musically meaningful clusters emerge from the latent representation:
+\begin{itemize}
+    \item Rock and Country lie adjacent to Blues, reflecting shared musical origins and similar instrumentation.
+    \item Blues and Jazz appear near one another, consistent with their overlapping harmony and rhythm.
+    \item Hip-Hop and Pop occupy distinct regions, both dominated by strong and unique rhythmic structure.
+\end{itemize}
+
+An especially interesting observation is that Classical and Metal lie close to each other in the latent projection. Many musicians informally note that metal often resembles classical music played with distortion, and both styles frequently use fast scalar passages, harmonic minor modes, dramatic dynamic contrast, and dense layering. The fact that the VAE recovers this relationship from short mel spectrogram segments suggests that it captures genuine similarities in time--frequency structure rather than just surface timbre.
+
+A broader theme is that GTZAN groups genres that share core instruments such as guitars, human voice, and a drum kit. This naturally limits separability compared to datasets with larger timbral diversity, such as solo instruments or ensemble-specific collections.
 
 \subsection{Reconstruction Quality}
-[placeholder]
 
-\subsection{Interpolation}
-[placeholder]
+The VAE reconstructs mel spectrograms with reasonable fidelity. As expected, reconstructions exhibit some blurring due to the Gaussian prior and the KL term. KL annealing and a higher latent dimension were important in avoiding posterior collapse and preserving recognizability in both time and frequency.
+
+The model reproduces broad spectral envelopes, energy contours, and band structures that align well with the originals, although fine texture is softened.
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{Blues.png}
+        \caption{Actual Spectrogram 1}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{BluesRecon.png}
+        \caption{Reconstruction 1}
+    \end{subfigure}
+
+    \vspace{0.5cm}
+
+    \begin{subfigure}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{Jazz.png}
+        \caption{Actual Spectrogram 2}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{JazzRecon.png}
+        \caption{Reconstruction 2}
+    \end{subfigure}
+
+    \caption{Original mel spectrograms (left) and VAE reconstructions (right).}
+    \label{fig:recon_grid}
+\end{figure}
+
+\section{Future Work}
+
+A major limitation of this work is the reliance on the Griffin--Lim vocoder to convert mel spectrograms back to audio. Griffin--Lim does not model phase and therefore introduces audible distortion. I confirmed this with a small test in which original audio clips were converted to mel spectrograms and then inverted, yielding noticeably degraded audio even without the VAE.
+
+Modern audio systems typically use neural vocoders such as HiFi-GAN, WaveGlow, WaveRNN, or diffusion-based decoders. Integrating one of these models would likely improve perceptual quality, but training and validating such a system was beyond the scope of this project.
 
 \section{Conclusions}
-[placeholder]
-\newpage
 
+This project explores how a variational autoencoder behaves when trained on short mel spectrogram segments drawn from the GTZAN music genre dataset. Even though the model only sees two-second windows, the learned latent space reflects patterns that align with basic music theory and genre structure, such as the close relationship between Blues, Rock, and Country and the structural similarity between Classical and Metal.
+
+It is notable that a relatively simple convolutional VAE, combined with standard regularization and KL annealing, can capture these relationships while still reconstructing spectrograms with enough detail to recover recognizable audio when paired with a vocoder. Overall, the project provides a practical demonstration of how VAEs trade off sharpness, diversity, and latent organization when modeling real audio data.
+
+\newpage
 \section{References}
+
+\begingroup
+\renewcommand{\section}[2]{}%
+\renewcommand{\refname}{}%
 \bibliographystyle{plain}
 \bibliography{references}
+\endgroup
 
 \end{document}

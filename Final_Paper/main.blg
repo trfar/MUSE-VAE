@@ -1,0 +1,48 @@
+This is BibTeX, Version 0.99d (TeX Live 2023/Debian)
+Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
+The top-level auxiliary file: main.aux
+The style file: plain.bst
+Database file #1: references.bib
+Warning--can't use both volume and number fields in tzanetakis2002gtzan
+You've used 3 entries,
+            2118 wiz_defined-function locations,
+            518 strings with 4533 characters,
+and the built_in function-call counts, 1187 in all, are:
+= -- 112
+> -- 54
+< -- 2
++ -- 22
+- -- 18
+* -- 84
+:= -- 189
+add.period$ -- 9
+call.type$ -- 3
+change.case$ -- 18
+chr.to.int$ -- 0
+cite$ -- 4
+duplicate$ -- 48
+empty$ -- 97
+format.name$ -- 18
+if$ -- 251
+int.to.chr$ -- 0
+int.to.str$ -- 3
+missing$ -- 3
+newline$ -- 18
+num.names$ -- 6
+pop$ -- 21
+preamble$ -- 1
+purify$ -- 15
+quote$ -- 0
+skip$ -- 37
+stack$ -- 0
+substring$ -- 73
+swap$ -- 16
+text.length$ -- 2
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 12
+warning$ -- 1
+while$ -- 11
+width$ -- 4
+write$ -- 35
+(There was 1 warning)

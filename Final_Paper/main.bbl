@@ -1,0 +1,18 @@
+\begin{thebibliography}{1}
+
+\bibitem{kingma2019vae}
+Diederik~P. Kingma and Max Welling.
+\newblock An introduction to variational autoencoders.
+\newblock {\em Foundations and Trends in Machine Learning}, 12(4):307--392, 2019.
+
+\bibitem{roberts2018musicvae}
+Adam Roberts, Jesse Engel, Colin Raffel, Curtis Hawthorne, and Doug Eck.
+\newblock Hierarchical variational autoencoders for music.
+\newblock In {\em Advances in Neural Information Processing Systems (NeurIPS)}, 2018.
+
+\bibitem{tzanetakis2002gtzan}
+George Tzanetakis and Perry Cook.
+\newblock Musical genre classification of audio signals.
+\newblock In {\em IEEE Transactions on Speech and Audio Processing}, volume~10, pages 293--302, 2002.
+
+\end{thebibliography}

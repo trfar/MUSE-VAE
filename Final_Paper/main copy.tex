@@ -1,0 +1,89 @@
+\documentclass[12pt]{article}
+
+\usepackage{amsmath, amssymb, amsfonts}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{bm}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{url}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{cite}
+
+\title{Variational Autoencoders for Musical Spectrogram Modeling: MUSE - VAE}
+
+\author{Tony Farrand \\
+Duke University \\
+STA 571: Advanced Probabilistic Machine Learning}
+
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This paper investigates the use of Variational Autoencoders (VAEs) to learn probabilistic latent representations of musical audio using spectrogram segments extracted from the GTZAN dataset. Each 30-second audio clip is divided into six 5-second windows and transformed into mel spectrograms. The probabilistic model is defined through the joint distribution \(p_\theta(x,z) = p_\theta(x|z)p(z)\) with a Gaussian prior and encoder-defined approximate posterior. Particular emphasis is placed on latent-space structure, including clustering by musical genre, smooth interpolation properties, and visualization tools developed to analyze encoder behavior. Results show meaningful separation of genres in latent space and recognizable but regularized spectrogram reconstructions, consistent with known VAE trade-offs between fidelity and structure.
+\end{abstract}
+\newpage
+
+\section{Introduction}
+
+Variational Autoencoders (VAEs), introduced by Kingma and Welling
+\cite{kingma2019vae}, provide a probabilistic latent-variable model capable of
+learning structured, continuous representations useful for generative modeling.
+In this project, we apply VAEs to musical audio represented as mel
+spectrograms.
+
+\section{Dataset and Preprocessing}
+
+We evaluate our model using the GTZAN dataset \cite{tzanetakis2002gtzan}, a
+standard benchmark containing ten musical genres, each with 100 audio clips.
+Each 30-second clip is segmented into fixed-size windows and transformed into
+log-magnitude mel spectrograms.
+
+\section{Previous Work}
+
+Music generation with deep generative models has been studied extensively.
+Hierarchical VAEs such as MusicVAE \cite{roberts2018musicvae} demonstrate
+strong latent structure and smooth interpolation properties in musical domains.
+Our work adapts these ideas to spectral audio representations rather than
+symbolic sequences.
+
+
+\section{Methods}
+[placeholder]
+
+\subsection{Probabilistic Model}
+[placeholder]
+
+\subsection{Model Variants and Training}
+[placeholder]
+
+\subsection{Latent Space Analysis Tools}
+[placeholder]
+
+\subsection{Mode Collapse Mitigation}
+[placeholder]
+
+\section{Results}
+[placeholder]
+
+\subsection{Latent Space Structure}
+[placeholder]
+
+\subsection{Reconstruction Quality}
+[placeholder]
+
+\subsection{Interpolation}
+[placeholder]
+
+\section{Conclusions}
+[placeholder]
+\newpage
+
+\section{References}
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}
