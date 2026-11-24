@@ -7,7 +7,7 @@ from argparse import ArgumentParser
 
 # PyTorch Imports
 from lightning.pytorch import Trainer
-from lightning.pytorch.callbacks import ModelCheckpoint
+from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
 from lightning.pytorch.loggers import WandbLogger
 
 # Custom Imports
@@ -47,13 +47,21 @@ if __name__ == '__main__':
         mode='min'
     )
 
+    ## Early Stopping
+    early_stop_callback = EarlyStopping(
+        monitor='val_loss',
+        patience=config.get('patience', 25),
+        verbose=True,
+        mode='min'
+    )
+
     ## Trainer
     trainer = Trainer(
         max_epochs=config.get('epochs', 200),
         accelerator='auto',
         devices=1,
         logger=wandb_logger,
-        callbacks=[checkpoint_callback],
+        callbacks=[checkpoint_callback, early_stop_callback],
         check_val_every_n_epoch=config.get('check_val_every_n_epoch', 1),
         log_every_n_steps=5,
     )
