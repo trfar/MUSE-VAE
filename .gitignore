@@ -23,3 +23,6 @@ temp_configs/
 
 # OS
 .DS_Store
+
+# pip build metadata
+*.egg-info/

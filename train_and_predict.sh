@@ -3,6 +3,9 @@
 # source ~/anaconda3/etc/profile.d/conda.sh
 # conda activate SoundMap
 
+## Python interpreter (override with PYTHON=python if needed)
+PYTHON=${PYTHON:-python3}
+
 ## Set Working Directory to the repo root (where this script lives)
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
@@ -40,13 +43,13 @@ for CONFIG in "${CONFIGS[@]}"; do
         echo "============================================"
         echo "TRAINING — Config: $TEMP_CONFIG"
         echo "============================================"
-        python "$TRAIN_SCRIPT" --config "$TEMP_CONFIG"
+        "$PYTHON" "$TRAIN_SCRIPT" --config "$TEMP_CONFIG"
 
         echo
         echo "============================================"
         echo "GENERATING SPECTROGRAM PDF — Config: $TEMP_CONFIG"
         echo "============================================"
-        python "$PRED_SCRIPT" --config "$TEMP_CONFIG"
+        "$PYTHON" "$PRED_SCRIPT" --config "$TEMP_CONFIG"
         echo "Completed run $i for config: $CONFIG"
         echo
 
@@ -54,7 +57,7 @@ for CONFIG in "${CONFIGS[@]}"; do
         echo "============================================"
         echo "GENERATING AUDIO RECONSTRUCTIONS — Config: $TEMP_CONFIG"
         echo "============================================"
-        python "$RECON_SCRIPT" --config "$TEMP_CONFIG" --max_samples 20
+        "$PYTHON" "$RECON_SCRIPT" --config "$TEMP_CONFIG" --max_samples 20
         echo "Completed run $i for config: $TEMP_CONFIG"
         echo
 
@@ -62,7 +65,7 @@ for CONFIG in "${CONFIGS[@]}"; do
         echo "============================================"
         echo "LATENT SPACE ANALYSIS — Config: $TEMP_CONFIG"
         echo "============================================"
-        python "$LATENT_SCRIPT" --config "$TEMP_CONFIG" --split "test" --max_samples 200
+        "$PYTHON" "$LATENT_SCRIPT" --config "$TEMP_CONFIG" --split "test" --max_samples 200
         echo "Completed run $i for config: $TEMP_CONFIG"
         echo
     done

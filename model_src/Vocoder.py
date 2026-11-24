@@ -66,7 +66,9 @@ class SimpleGriffinLimVocoder:
 
     ## Save audio to disk
     def save_audio(self, audio, out_path):
-        os.makedirs(os.path.dirname(out_path), exist_ok=True)
+        out_dir = os.path.dirname(out_path)
+        if out_dir:
+            os.makedirs(out_dir, exist_ok=True)
         if audio.dim() == 1:
             audio = audio.unsqueeze(0)
         torchaudio.save(out_path, audio, self.sample_rate)

@@ -15,3 +15,8 @@ dependencies = [
     "librosa",
     "wandb",
 ]
+
+# This project has no installable package; the scripts are run from the repo root.
+# The empty list stops setuptools from auto-discovering top-level folders.
+[tool.setuptools]
+packages = []

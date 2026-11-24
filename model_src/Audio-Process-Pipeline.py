@@ -26,12 +26,8 @@ def load_config(config_path):
 
 def build_conv_vae_from_checkpoint(checkpoint_path, config, device):
     ## Instantiate ConvVAE Model
-    latent_dim = config.get("latent_dim", 128)
-    learning_rate = config.get("learning_rate", 1e-4)
-
     model = ConvVAE(
-        latent_dim=latent_dim,
-        learning_rate=learning_rate
+        latent_dim=config.get("latent_dim", 128)
     ).to(device)
 
     ## Load Lightning Checkpoint And Map To ConvVAE
@@ -51,7 +47,7 @@ def build_conv_vae_from_checkpoint(checkpoint_path, config, device):
         else:
             new_state_dict[k] = v
 
-    model.load_state_dict(new_state_dict, strict=False)
+    model.load_state_dict(new_state_dict, strict=True)
     model.eval()
 
     return model
@@ -77,7 +73,7 @@ def main():
     ## Resolve Project Root And GTZAN Paths
     this_file = os.path.abspath(__file__)
     model_src_dir = os.path.dirname(this_file)
-    project_root = os.path.dirname(os.path.dirname(model_src_dir))
+    project_root = os.path.dirname(model_src_dir)
 
     gtzan_root = os.path.join(project_root, "GTZAN_Dataset")
     audio_out_dir = os.path.join(gtzan_root, "Generated_Audio")

@@ -12,24 +12,8 @@ import torch
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 
-from lightning.pytorch import LightningModule
 from model_src.DataLoader import DataProcessing
-from model_frameworks.VAE import ConvVAE as ConvVAE
-
-
-# Lightning wrapper, matching your training setup
-class MUSE_VAE(LightningModule):
-    def __init__(self, config):
-        super().__init__()
-        self.save_hyperparameters(config)
-        self.lr = config.get("lr", 1e-3)
-        self.model = ConvVAE(
-            latent_dim=config.get("latent_dim", 128),
-            learning_rate=config.get("learning_rate", 1e-4),
-        )
-
-    def forward(self, x):
-        return self.model(x)  # returns (recon, mu, logvar)
+from model_frameworks.muse_vae import MUSE_VAE
 
 
 def main():
@@ -105,22 +89,15 @@ def main():
 
     # Where to save results
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    AdvML_root = os.path.dirname(project_root)
     save_dir = os.path.join(project_root, "TrainedModels")
-    save_dir_2 = os.path.join(AdvML_root, "TrainedModels")
     os.makedirs(save_dir, exist_ok=True)
-    os.makedirs(save_dir_2, exist_ok=True)
 
     exp_name = config.get("experiment_name", "experiment")
     results_dir = os.path.join(save_dir, exp_name)
-    results_dir_2 = os.path.join(save_dir_2, exp_name)
     os.makedirs(results_dir, exist_ok=True)
-    os.makedirs(results_dir_2, exist_ok=True)
 
     img_path = os.path.join(results_dir, f"latent_pca_{args.split}.png")
-    img_path_2 = os.path.join(results_dir_2, f"latent_pca_{args.split}.png")
     csv_path_out = os.path.join(results_dir, f"latent_pca_{args.split}.csv")
-    csv_path_out_2 = os.path.join(results_dir_2, f"latent_pca_{args.split}.csv")
 
     # Collect latent means and genres
     all_mu = []
@@ -176,9 +153,7 @@ def main():
         "genre": genres
     })
     df_out.to_csv(csv_path_out, index=False)
-    df_out.to_csv(csv_path_out_2, index=False)
     print(f"[INFO] Saved latent PCA data to: {csv_path_out}")
-    print(f"[INFO] Saved latent PCA data to: {csv_path_out_2}")
 
     # Plot scatter colored by genre
     unique_genres = sorted(list(set(genres)))
@@ -206,11 +181,9 @@ def main():
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
     plt.savefig(img_path, dpi=300)
-    plt.savefig(img_path_2, dpi=300)
     plt.close()
 
     print(f"[INFO] Saved latent PCA plot to: {img_path}")
-    print(f"[INFO] Saved latent PCA plot to: {img_path_2}")
 
 if __name__ == "__main__":
     main()

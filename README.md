@@ -88,6 +88,9 @@ pip install -e .
 
 Notes:
 
+- Run step 1 before anything else: the checked-in `GTZAN_DATA_MASTER.csv` was
+  generated on the author's machine, and the processor rewrites it with paths
+  relative to this repo.
 - Training logs to **Weights & Biases** (`wandb login` first); checkpoints land in
   `TrainedModels/<experiment>/` and the best-checkpoint path is written back into
   `config.yaml`.

@@ -6,11 +6,10 @@ import lightning.pytorch as pl
 
 ## Convolutional Variational Autoencoder for 128x216 Mel Spectrograms
 class ConvVAE(pl.LightningModule):
-    def __init__(self, latent_dim=32, learning_rate=1e-4):
+    def __init__(self, latent_dim=32):
         super().__init__()
         self.save_hyperparameters()
         self.latent_dim = latent_dim
-        self.learning_rate = learning_rate
 
         ## Encoder (no hardcoded shapes, fully dynamic)
         self.encoder = nn.Sequential(
@@ -52,7 +51,7 @@ class ConvVAE(pl.LightningModule):
         ## Projection from latent space back into encoder shape
         self.decoder_fc = nn.Linear(self.latent_dim, self.enc_feat_dim)
 
-        ## Decoder (mirrors encoder, dynamic reshape)
+        ## Decoder (projects the latent back to spectrogram shape)
         self.decoder = nn.Sequential(
             nn.ConvTranspose2d(256, 256, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),

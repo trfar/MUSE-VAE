@@ -14,29 +14,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 
 ## Project Imports
 from model_src.DataLoader import DataProcessing
-from model_frameworks.VAE import ConvVAE as ConvVAE  # same class you used in training
-from lightning.pytorch import LightningModule
-
-
-## Lightning Wrapper (same structure as your MUSE_VAE in training)
-class MUSE_VAE(LightningModule):
-    def __init__(self, config):
-        super().__init__()
-        # Save config for checkpointing
-        self.save_hyperparameters(config)
-
-        # Learning rate
-        self.lr = config.get("lr", 1e-3)
-
-        # Build ConvVAE model
-        self.model = ConvVAE(
-            latent_dim=config.get("latent_dim", 128),
-            learning_rate=config.get("learning_rate", 1e-4),
-        )
-
-    def forward(self, x):
-        # Forward through ConvVAE
-        return self.model(x)
+from model_frameworks.muse_vae import MUSE_VAE
 
 
 ## Helper function to plot one pair to the PDF
@@ -131,7 +109,6 @@ if __name__ == "__main__":
 
     ## Set up PDF output path
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    AdvML_root = os.path.dirname(project_root)
     save_dir_project = os.path.join(project_root, "TrainedModels")
     os.makedirs(save_dir_project, exist_ok=True)
 
@@ -140,7 +117,6 @@ if __name__ == "__main__":
     os.makedirs(results_dir, exist_ok=True)
 
     pdf_path_1 = os.path.join(results_dir, "Mel_Reconstruction.pdf")
-    pdf_path_2 = os.path.join(AdvML_root, "TrainedModels", f"{exp_name}_Mel_Reconstruction.pdf")
 
     ## Run through test set and save comparisons
     max_examples = args.max_examples
@@ -186,19 +162,9 @@ if __name__ == "__main__":
                         pdf=pdf
                     )
 
-                    # Also save to secondary location
-                    plot_pair_to_pdf(
-                        original=original,
-                        reconstructed=reconstructed,
-                        genre=genre,
-                        index=example_count,
-                        pdf=PdfPages(pdf_path_2)
-                    )
-
                     example_count += 1
 
                 if example_count >= max_examples:
                     break
 
     print(f"[INFO] Reconstruction PDF saved to: {pdf_path_1}")
-    print(f"[INFO] Reconstruction PDF also saved to: {pdf_path_2}")
