@@ -1,0 +1,17 @@
+[project]
+name = "muse-vae"
+version = "0.1.0"
+description = "Convolutional VAE for musical mel spectrograms (GTZAN), built with PyTorch Lightning"
+requires-python = ">=3.9"
+dependencies = [
+    "torch",
+    "torchaudio",
+    "lightning",
+    "ruamel.yaml",
+    "pandas",
+    "numpy",
+    "matplotlib",
+    "scikit-learn",
+    "librosa",
+    "wandb",
+]
