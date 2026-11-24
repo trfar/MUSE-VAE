@@ -7,7 +7,7 @@ on the same scale the VAE is trained on (dB, clipped to [0, 1]), then
 reconstructs a waveform and saves it to model_outputs/.
 
 Run from the repo root:
-    python model_src/Vocoder_Unit_Test.py
+    python tests/Vocoder_Unit_Test.py
 """
 import os
 import sys
@@ -15,8 +15,8 @@ import torch
 import torchaudio
 from argparse import ArgumentParser
 
-# Ensure sibling modules import when run as a script
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+# Vocoder.py lives in model_src/
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "model_src"))
 
 from Vocoder import SimpleGriffinLimVocoder
 

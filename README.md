@@ -83,7 +83,7 @@ pip install -e .
 4. **Vocoder smoke test** (no data needed):
 
    ```bash
-   python model_src/Vocoder_Unit_Test.py
+   python tests/Vocoder_Unit_Test.py
    ```
 
 Notes:
@@ -103,7 +103,22 @@ Notes:
 into waveforms via inverse-mel + Griffin-Lim phase estimation. It works but fidelity is
 limited (phase estimation; the mel scale is power-based while Griffin-Lim expects
 amplitude) — included as an exploration of mel → audio, with a self-contained test in
-`model_src/Vocoder_Unit_Test.py`.
+`tests/Vocoder_Unit_Test.py`.
+
+## Tests
+
+Plain assert-based tests, no framework required (they also collect under `pytest` if you
+have it):
+
+```bash
+python tests/test_architecture.py
+python tests/test_hparams.py
+python tests/Vocoder_Unit_Test.py
+```
+
+`test_architecture.py` checks the encoder/decoder round-trip, the `latent_dim` knob, and
+per-sample encoding. `test_hparams.py` checks config values actually reach the model
+(learning rate, latent size, KL β annealing, warmup scheduler).
 
 ## Credits
 
