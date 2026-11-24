@@ -1,0 +1,42 @@
+experiment_name: "251204_MUSE-VAE_Training"
+wandb_project_name: "MUSE-VAE"
+
+# -------------------------------------------------------------------
+# Dataset / Data Processing
+# -------------------------------------------------------------------
+root_dir: "./"
+data_dir: "model_outputs"
+batch_size: 64
+data_mean: 0.5
+data_std: 0.5
+
+train_dataset: "train.csv"
+val_dataset: "val.csv"
+test_dataset: "test.csv"
+
+# -------------------------------------------------------------------
+# Training & Optimization
+# -------------------------------------------------------------------
+epochs: 200 #200
+lr: 0.0001
+patience: 25
+check_val_every_n_epoch: 1
+test_every_n_epochs: 50
+
+# Optionally, a warm-up phase
+warmup: true
+warmup_steps: 1000
+
+# -------------------------------------------------------------------
+# Model Architecture
+# -------------------------------------------------------------------
+model_name: "MUSE-VAE"
+latent_dim: 1024 #1024
+anneal_epochs: 30
+KL_Beta: 0.0005 #0.0005
+#-------------------------------------------------------------------
+# Prediction & Evaluation
+# -------------------------------------------------------------------
+# Written back automatically after training (see Training-Pipeline.py)
+checkpoint_path:
+output_dir: "./model_outputs"

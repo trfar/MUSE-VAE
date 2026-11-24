@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+
+# LaTeX build artifacts
+*.aux
+*.bbl
+*.blg
+*.fls
+*.fdb_latexmk
+*.log
+*.out
+*.synctex.gz
+
+# Local-only folders (paper source + trained model artifacts)
+Final_Paper/
+TrainedModels/
+GTZAN_Dataset/
+
+# Run outputs
+model_outputs/
+temp_configs/
+
+# OS
+.DS_Store
